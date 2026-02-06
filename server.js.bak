@@ -1,0 +1,62 @@
+const express = require("express");
+const nodemailer = require("nodemailer");
+const cors = require("cors");
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public"));
+
+let otpStore = {}; // simpan OTP sementara
+
+// Konfigurasi email (GMAIL)
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "akunpribadihaidar@gmail.com",
+    pass: "irnh eipr apax xsyb"
+  }
+});
+
+// Generate OTP
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000);
+}
+
+// Kirim OTP
+app.post("/send-otp", async (req, res) => {
+  const { email } = req.body;
+  const otp = generateOTP();
+
+  otpStore[email] = otp;
+
+  try {
+    await transporter.sendMail({
+      from: "Verifikasi <EMAIL_KAMU@gmail.com>",
+      to: email,
+      subject: "Kode Verifikasi Email",
+      text: `Kode verifikasi email kamu adalah: ${otp}`
+    });
+
+    res.json({ success: true, message: "OTP terkirim" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ success: false });
+  }
+});
+
+// Verifikasi OTP
+app.post("/verify-otp", (req, res) => {
+  const { email, otp } = req.body;
+
+  if (otpStore[email] == otp) {
+    delete otpStore[email];
+    res.json({ success: true });
+  } else {
+    res.json({ success: false });
+  }
+});
+
+app.listen(3000, () => {
+  console.log("Server jalan di http://localhost:3000");
+});
